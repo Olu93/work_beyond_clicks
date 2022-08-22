@@ -32,12 +32,27 @@ sub_enriched
 # display(sub_enriched['brand_publications'].apply(len).max())
 # %%
 sub_images = sub_enriched["images"].apply(transform_1_to_1_list).apply(pd.Series)
+sub_images.columns = [f"images.{el}" for el in sub_images.columns]
 sub_brand_publication = sub_enriched["brand_publications"].apply(transform_1_to_1_list).apply(pd.Series)
+sub_brand_publication.columns = [f"brand.{el}" for el in sub_brand_publication.columns]
 sub_brand_categories = sub_enriched["categories"].apply(lambda x: "|".join(x))
+sub_brand_categories.name = f"brand.{sub_brand_categories.name}"
 sub_brand_source_keywords = sub_enriched["source_keywords"].apply(lambda x: "|".join(x))
+sub_brand_source_keywords.name = f"brand.{sub_brand_source_keywords.name}"
 sub_complex_enrichments = sub_enriched[[col for col in sub_enriched.select_dtypes('object').columns
                                         if 'enrichment' in col]].drop(["enrichments.userneeds.max", "enrichments.language"], axis=1)
 sub_complex_enrichments
+
+# %%
+sub_top_level = df.drop('enriched_article', axis=1)
+sub_remaining = sub_enriched.drop([
+    "cds_content_id",
+    "images",
+    "brand_publications",
+    "brand",
+    "categories",
+    "source_keywords",
+], axis=1).drop(sub_complex_enrichments.columns, axis=1)
 
 
 # %%
@@ -141,9 +156,6 @@ sub_topic_enrichments = pd.DataFrame(sub_complex_enrichments["enrichments.topics
                                      columns=[f"topics.{c}" for c in cols])
 sub_topic_enrichments
 
-# %%
-sub_complex_enrichments
-
 
 # %%
 def sub_extract_categories(el):
@@ -203,9 +215,30 @@ cols = [
     "gender",
 ]
 
-tmp_df = sub_complex_enrichments["enrichments.image_persons"]
-tmp_df[np.isnan(tmp_df)] = []
-sub_imgperson_enrichments = pd.DataFrame(tmp_df.to_frame().apply(transform_extract_imgperson).iloc[:, 0].to_list(),
-                                        columns=[f"imgperson.{c}" for c in cols])
+tmp_df = sub_complex_enrichments["enrichments.image_persons"].copy()
+tmp_df_nan_indices = ~tmp_df.map(lambda x: isinstance(x, list))
+tmp_df.loc[tmp_df_nan_indices] = [[] for _ in range(np.sum(tmp_df_nan_indices))]  # [np.empty(0,dtype=float)]*np.sum(tmp_df_nan_indices)
+sub_imgperson_enrichments = pd.DataFrame(tmp_df.to_frame().apply(transform_extract_imgperson).iloc[:, 0].to_list(), columns=[f"imgperson.{c}" for c in cols])
 sub_imgperson_enrichments
+# %%
+# %%
+complex_dict_cols = [
+    sub_images,
+    sub_brand_publication,
+    sub_brand_categories,
+    sub_brand_source_keywords,
+]
+
+complex_list_cols = [
+    sub_media_topic_enrichments,
+    sub_named_entity_enrichments,
+    sub_topic_enrichments,
+    sub_category_enrichments,
+    sub_imgperson_enrichments,
+]
+
+df_all_merged = sub_top_level.join(sub_remaining).join(complex_dict_cols).join(complex_list_cols)
+df_all_merged
+# %%
+df_all_merged[10:20].T.to_csv("Article_Columns.csv")
 # %%
