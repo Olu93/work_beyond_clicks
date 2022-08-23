@@ -49,15 +49,18 @@ data[metric_cols].values.shape
 coocc = data[value_cols].values.T @ data[metric_cols].values
 coocc
 # %%
+plt.figure(figsize=(15,10))
 tmp = pd.DataFrame(coocc, columns=metric_cols, index=value_cols).T
 sns.heatmap(tmp)
 plt.show()
 # %%
+plt.figure(figsize=(15,10))
 normed_coocc = coocc/data[value_cols].sum().values[:, None]
 tmp = pd.DataFrame(normed_coocc, columns=metric_cols, index=value_cols).T
 sns.heatmap(tmp)
 plt.show()
 # %%
+plt.figure(figsize=(15,10))
 normed_coocc_T = (coocc.T/data[metric_cols].sum().values[:, None]).T
 tmp = pd.DataFrame(normed_coocc_T, columns=metric_cols, index=value_cols).T
 sns.heatmap(tmp)
