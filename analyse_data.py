@@ -34,11 +34,11 @@ sub_enriched
 sub_images = sub_enriched["images"].apply(transform_1_to_1_list).apply(pd.Series)
 sub_images.columns = [f"images.{el}" for el in sub_images.columns]
 sub_brand_publication = sub_enriched["brand_publications"].apply(transform_1_to_1_list).apply(pd.Series)
-sub_brand_publication.columns = [f"brand.{el}" for el in sub_brand_publication.columns]
+sub_brand_publication.columns = [f"enriched_article.{el}" for el in sub_brand_publication.columns]
 sub_brand_categories = sub_enriched["categories"].apply(lambda x: "|".join(x))
-sub_brand_categories.name = f"brand.{sub_brand_categories.name}"
+sub_brand_categories.name = f"enriched_article.{sub_brand_categories.name}"
 sub_brand_source_keywords = sub_enriched["source_keywords"].apply(lambda x: "|".join(x))
-sub_brand_source_keywords.name = f"brand.{sub_brand_source_keywords.name}"
+sub_brand_source_keywords.name = f"enriched_article.{sub_brand_source_keywords.name}"
 sub_complex_enrichments = sub_enriched[[col for col in sub_enriched.select_dtypes('object').columns
                                         if 'enrichment' in col]].drop(["enrichments.userneeds.max", "enrichments.language"], axis=1)
 sub_complex_enrichments
@@ -53,7 +53,7 @@ sub_remaining = sub_enriched.drop([
     "categories",
     "source_keywords",
 ], axis=1).drop(sub_complex_enrichments.columns, axis=1)
-
+sub_remaining
 
 # %%
 def transform_extract_media_topic(x: list):
