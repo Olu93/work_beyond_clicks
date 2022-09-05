@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import flatdict
 import numpy as np
 # %%
-df = pd.read_json('testdata/raw_cds_data_json_2022-04-01_2022-07-04.jsonl', orient='records', lines=True)
+df = pd.read_json('data_dpg_testdata/raw_cds_data_json_2022-04-01_2022-07-04.jsonl', orient='records', lines=True)
 df
 
 
@@ -240,5 +240,5 @@ complex_list_cols = [
 df_all_merged = sub_top_level.join(sub_remaining).join(complex_dict_cols).join(complex_list_cols)
 df_all_merged
 # %%
-df_all_merged[10:20].T.to_csv("Article_Columns.csv")
+df_all_merged[:15].T.to_csv("figs/cds_column_overview.csv")
 # %%

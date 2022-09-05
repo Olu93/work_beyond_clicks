@@ -1,6 +1,7 @@
 # %%
 from pybtex.database import parse_file, Entry, Person, BibliographyData
 from pybtex import errors
+# import pybtex.database.input.bibtex
 import pandas as pd
 from IPython.display import display
 import seaborn as sns
@@ -19,11 +20,11 @@ def extract_relevant_features(entry: Entry):
 
 
 def extract_bibtex_info(name: str):
-    db: BibliographyData = parse_file(f"bibtex/{name}.bib", strict=False)
+    db: BibliographyData = parse_file(f"data_literature_search/bibtex/{name}.bib", strict=False, bib_format="bibtex")
     return [extract_relevant_features(db.entries[entry_name]) for entry_name in db.entries]
 
 def extract_springer_info(name: str):
-    db = pd.read_csv(f'csv/{name}.csv')[["Item Title", "Publication Title", "Item DOI", "Authors"]]
+    db = pd.read_csv(f'data_literature_search/csv/{name}.csv')[["Item Title", "Publication Title", "Item DOI", "Authors"]]
     db.columns = ["title", "journal", "doi", "authors"]
     return db
 

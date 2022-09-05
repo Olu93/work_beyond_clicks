@@ -32,7 +32,7 @@ C_GRP_OVERALL = "Overall"
 C_COOC = "Co-Occurrence"
 C_COMBINATION = "Combination"
 C_COMPLEMENT = "Complement"
-data = pd.read_csv(io.open('literature_review_merged_final_prepared_for_datanalysis.csv', 'r', encoding='utf-8'))
+data = pd.read_csv(io.open('data_literature_review/data_post_screening.csv', 'r', encoding='utf-8'))
 data = data.set_index("ID")
 data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 data = data[[col for col in data.columns if not ("Spalte" in col)]]
@@ -288,24 +288,11 @@ ax = sns.lineplot(
     x=C_YEAR,
     y=C_MENTIONS,
     hue=C_VALUE_GROUP,
-    # estimator=sum,
-    # orient="h",
     ax=ax,
-    # ci=None,
-    # linewidth=2.5,
-    # facecolor=(1, 1, 1, 0),
-    # edgecolor=".2",
 )
 
-# sns.lineplot(
-#     data=grouped_time_data.groupby(C_YEAR).sum(),
-#     x=C_YEAR,
-#     y=C_MENTIONS,
-#     label="Overall Sum",
-#     color='Grey',
-# )
-
-sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean", color='Black', linestyle="-.")
+sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
 # TODO: Some more tiks. Maybe horizontal lines
@@ -372,7 +359,12 @@ pairwise_data_grp_cooc[C_COMBINATION] = pairwise_data_grp_cooc[[C_VALUE_GROUP, C
 pairwise_data_grp_cooc
 # %%
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.lineplot(data=pairwise_data_grp_cooc, x=C_YEAR, y=C_COOC, hue=C_COMBINATION)
+sns.lineplot(
+    data=pairwise_data_grp_cooc[pairwise_data_grp_cooc[C_VALUE_GROUP] != pairwise_data_grp_cooc[C_COMPLEMENT]],
+    x=C_YEAR,
+    y=C_COOC,
+    hue=C_COMBINATION,
+)
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
 fig.suptitle("Co-Occurences of Value Contributions over Time")
@@ -381,19 +373,20 @@ plt.savefig('figs/lit_rev_cooc_over_time.png')
 plt.show()
 # %%
 # fig, ax = plt.subplots(figsize=(12, 6))
-sns.relplot(
-    data=pairwise_data_grp_cooc,
+fig = sns.relplot(
+    data=pairwise_data_grp_cooc[pairwise_data_grp_cooc[C_VALUE_GROUP] != pairwise_data_grp_cooc[C_COMPLEMENT]],
     x=C_YEAR,
     y=C_COOC,
     col=C_VALUE_GROUP,
     hue=C_COMPLEMENT,
     kind="line",
+    col_wrap=2,
 )
 # ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 # ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-# fig.suptitle("Co-Occurences of Value Contributions over Time")
-# fig.tight_layout()
-# plt.savefig('figs/lit_rev_cooc_over_time.png')
+fig.figure.suptitle("Co-Occurences of Value Contributions over Time for each Value Group")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_cooc_over_time_subplots.png')
 plt.show()
 # %%
 data[COLS_METRICS].values.shape
