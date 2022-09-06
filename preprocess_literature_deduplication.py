@@ -18,7 +18,7 @@ def extract_relevant_features(entry: Entry):
 
 
 def extract_bibtex_info(name: str):
-    db: BibliographyData = parse_file(f"relevant/{name}.bib", strict=False)
+    db: BibliographyData = parse_file(f"data_literature_search/relevant/{name}.bib", strict=False)
     return [extract_relevant_features(db.entries[entry_name]) for entry_name in db.entries]
 
 # %%
@@ -39,6 +39,7 @@ raw = pd.concat([db_scopus, db_springer])
 num_duplicates_raw = raw.duplicated(subset='doi').sum()
 num_duplicates_raw
 # %%
-combined.to_csv('data_bibliography/csv/combined_database.csv')
+combined.to_csv('data_literature_search/csv/combined_database.csv')
+combined.to_csv('data_literature_review/data_pre_screening.csv')
 # %%
 db_scopus

@@ -32,6 +32,8 @@ C_GRP_OVERALL = "Overall"
 C_COOC = "Co-Occurrence"
 C_COMBINATION = "Combination"
 C_COMPLEMENT = "Complement"
+C_ROLLING = "Rolling"
+
 data = pd.read_csv(io.open('data_literature_review/data_post_screening.csv', 'r', encoding='utf-8'))
 data = data.set_index("ID")
 data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
@@ -300,9 +302,13 @@ fig.suptitle("Sum of Value Contributions over Time")
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_over_time.png')
 plt.show()
+
+# %%
+# fig, ax = plt.subplots(figsize=(12, 6))
+pd.read_csv('data_literature_review/data_pre_screening.csv')
+
 # %%
 
-C_ROLLING = "Rolling"
 
 
 # https://deffro.github.io/time%20series/exploratory%20data%20analysis/data%20visualization/time-series-analysis/
