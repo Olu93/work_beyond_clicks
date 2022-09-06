@@ -11,6 +11,7 @@ def extract_relevant_features(entry: Entry):
     result = {}
     result['title'] = entry.fields.get('title', "")
     result['journal'] = entry.fields.get('journal', "")
+    result['year'] = entry.fields.get('year', 1900)
     result['doi'] = entry.fields.get('doi', "").replace("{", "").replace("}", "")
     
     result['authors'] = "; ".join([str(person) for person in entry.persons['author']]) if "author" in entry.persons else ""

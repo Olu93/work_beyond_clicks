@@ -282,6 +282,9 @@ ax.bar_label(ax.containers[0], label_type='edge', padding=5)
 fig.suptitle('Count of Platforms')
 plt.savefig('figs/lit_rev_count_platforms.png')
 plt.show()
+
+
+
 # %%
 grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -294,18 +297,49 @@ ax = sns.lineplot(
 )
 
 sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
 # sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-# TODO: Some more tiks. Maybe horizontal lines
+# ax.yaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(1))
+# ax.tick_params(axis='y', which='minor', bottom=False)
+ax.grid(axis='y', )
 fig.suptitle("Sum of Value Contributions over Time")
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_over_time.png')
 plt.show()
 
+
+# %%
+df_all_pre_screening = pd.read_csv('data_literature_review/data_pre_screening.csv')
+df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y")
+df_all_pre_screening[C_TITLE] = df_all_pre_screening["title"]
+df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >=  data[C_YEAR].min()]
+df_all_pre_screening
+
+grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
+fig, ax = plt.subplots(figsize=(12, 6))
+# ax = sns.lineplot(
+#     data=grouped_time_data,
+#     x=C_YEAR,
+#     y=C_MENTIONS,
+#     hue=C_VALUE_GROUP,
+#     ax=ax,
+# )
+
+sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of News Recommeder Papers published")
+sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of Value-Driven News Recommender Papers published")
+# sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
+ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
+ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+ax.grid(axis='y')
+fig.suptitle("Count of Value Contributing Papers compared to News RS literature over Time")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_count_nrs_over_time.png')
+plt.show()
+
 # %%
 # fig, ax = plt.subplots(figsize=(12, 6))
-pd.read_csv('data_literature_review/data_pre_screening.csv')
 
 # %%
 
@@ -330,6 +364,7 @@ ax = sns.lineplot(
 )
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+ax.grid(axis='y', )
 sns.lineplot(data=rolling_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_ROLLING, label="Mean", color='Black', linestyle="-.")
 fig.suptitle("Trend of Value Contributions over Time (using EWMA)")
 fig.tight_layout()
@@ -373,6 +408,7 @@ sns.lineplot(
 )
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+ax.grid(axis='y', )
 fig.suptitle("Co-Occurences of Value Contributions over Time")
 fig.tight_layout()
 plt.savefig('figs/lit_rev_cooc_over_time.png')
@@ -422,3 +458,24 @@ sns.heatmap(tmp)
 plt.savefig('figs/lit_rev_metric_v_values_cooc_normed_by_metric.png')
 plt.show()
 # %%
+data
+# %%
+
+fig, (ax1, ax2) = plt.subplots(1,2, figsize=(12, 6), squeeze=True)
+tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
+tmp_counts = pd.value_counts(tmp['Diversity-Type'])
+sns.lineplot(data=tmp.groupby([C_YEAR, 'Diversity-Type']).count(), x=C_YEAR, y=C_TITLE, hue='Diversity-Type', ax=ax1)
+sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>1].index, ax=ax2)
+ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45, ha='center')
+
+# %%
+fig, ax = plt.subplots(1,1, figsize=(12, 6), squeeze=True)
+tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
+tmp_counts = pd.value_counts(tmp['Diversity-Type'])
+sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>1].index, ax=ax)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='center')
+ax.bar_label(ax.containers[0], label_type='edge', padding=5)
+fig.suptitle("Co-Occurences of Value Contributions over Time")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_diversity_type_counts.png')
+plt.show()
