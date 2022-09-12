@@ -269,6 +269,9 @@ complex_list_cols = [
     sub_topic_enrichments,
     sub_category_enrichments,
     sub_imgperson_enrichments,
+    sub_garm_v2,
+    sub_topics_v2,
+    sub_userneeds,
 ]
 
 df_all_merged = sub_top_level.join(sub_reduced).join(complex_dict_cols).join(complex_list_cols)

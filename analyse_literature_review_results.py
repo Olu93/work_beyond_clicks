@@ -212,6 +212,8 @@ shortened_data = molten_data[molten_data[C_MENTIONS] > 0]
 pivoted_data = shortened_data.groupby([C_TYPE_PAPER, C_VALUE_GROUP]).sum().reset_index().pivot(index=C_TYPE_PAPER, columns=C_VALUE_GROUP, values=C_MENTIONS)
 fig, ax = plt.subplots(figsize=(15, 10))
 pivoted_data.plot(kind='bar', stacked=False, ax=ax)  #.set_index(C_TYPE_PAPER)[C_VALUE_GROUP].plot(kind='hist', stacked=True)
+for container in ax.containers:
+    ax.bar_label(container, label_type='edge', padding=5)
 fig.suptitle('Count of Value Contributions per Paper Type')
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_value_group_by_paper_type.png')
@@ -238,6 +240,8 @@ plt.show()
 pivoted_data_T = pivoted_data.T
 fig, ax = plt.subplots(figsize=(15, 11))
 pivoted_data_T.plot(kind='bar', stacked=False, ax=ax)  #.set_index(C_TYPE_PAPER)[C_VALUE_GROUP].plot(kind='hist', stacked=True)
+for container in ax.containers:
+    ax.bar_label(container, label_type='edge', padding=5)
 ax.legend(loc='upper right')
 fig.suptitle('Count of Paper Types per Value Contribution')
 fig.tight_layout()
@@ -259,6 +263,7 @@ sns.countplot(
 )
 ax.set_xticklabels(ax.get_xticklabels(), rotation=35, ha='center')
 ax.bar_label(ax.containers[0], label_type='edge', padding=5)
+
 fig.suptitle('Count of Paper Types')
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_paper_types.png')
@@ -468,6 +473,16 @@ sns.lineplot(data=tmp.groupby([C_YEAR, 'Diversity-Type']).count(), x=C_YEAR, y=C
 sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>1].index, ax=ax2)
 ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45, ha='center')
 
+# %%
+fig, ax = plt.subplots(1,1, figsize=(12, 6), squeeze=True)
+tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
+tmp_counts = pd.value_counts(tmp['Diversity-Type'])
+sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>=1].index, ax=ax)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='center')
+ax.bar_label(ax.containers[0], label_type='edge', padding=5)
+fig.suptitle("Co-Occurences of Value Contributions over Time")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_diversity_type_counts_ugly.png')
 # %%
 fig, ax = plt.subplots(1,1, figsize=(12, 6), squeeze=True)
 tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
