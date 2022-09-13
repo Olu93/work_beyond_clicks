@@ -18,6 +18,8 @@ plt.style.use(['seaborn-white', 'seaborn-paper'])
 #%%
 C_TYPE_PAPER = "Type Of Paper"
 C_PLATFORM = "Platform"
+C_DIVERSITY_TYPE = 'Diversity-Type'
+C_EVALUATION_TYPE = 'Additional Details'
 C_YEAR = "Year"
 C_TITLE = "Title"
 C_VALUE_GROUP = "Value Group"
@@ -26,13 +28,25 @@ C_MENTIONS = "Mentions"
 C_GRP_UX = "UX Values"
 C_GRP_NEWS = "News Values"
 C_GRP_RESPONSIBILITY = "Responsibility Values"
-C_GRP_GOTO = "Go To Values"
+C_GRP_GOTO = "Standard Values"
 C_GRP_TECHNICAL = "Technical Values"
 C_GRP_OVERALL = "Overall"
 C_COOC = "Co-Occurrence"
 C_COMBINATION = "Combination"
 C_COMPLEMENT = "Complement"
 C_ROLLING = "Rolling"
+C_METRICS_ACC = "Standard Accuracy"
+C_METRICS_CTR = "Modern Metrics"
+C_METRICS_RANK = "List Metrics"
+C_METRICS_DIVERSITY = "Diversity Metrics"
+COLS_METRICS_ACC = ["Accuracy", "Recall", "Precision", "F1"]
+COLS_METRICS_CTR = ["Click-Through-Rate", "Ndcg"]
+COLS_METRICS_RANK = [
+    "Wilcoxon Signed Ranks Test",
+]
+COLS_METRICS_DIVERSITY = [
+    "Intra-List-Diversity",
+]
 
 data = pd.read_csv(io.open('data_literature_review/data_post_screening.csv', 'r', encoding='utf-8'))
 data = data.set_index("ID")
@@ -56,6 +70,8 @@ data[all_relevant_cols] = data[all_relevant_cols].astype(float)
 data = data[data['Not Relevant'] == 0].drop('Not Relevant', axis=1)
 data[C_TYPE_PAPER] = data[C_TYPE_PAPER].str.title()
 data[C_YEAR] = pd.to_datetime(data[C_YEAR].astype(str), format="%Y")
+data[C_DIVERSITY_TYPE] = data[C_DIVERSITY_TYPE].str.split(',')
+data[C_EVALUATION_TYPE] = data[C_EVALUATION_TYPE].str.split(',')
 data = data.sort_values(C_YEAR)
 data.dtypes
 # %%
@@ -159,7 +175,11 @@ COLS_VALUES_GRP = [
     C_GRP_UX,
 ]
 
-molten_data = data.melt(id_vars=[C_TITLE, C_TYPE_PAPER, C_PLATFORM, C_YEAR], value_vars=COLS_VALUES, var_name=C_VALUE, value_name=C_MENTIONS)
+COLS_METRICS = [
+    c.title() for c in ['Click-Through-Rate', 'Accuracy', 'Precision', 'Recall', 'F1', 'Intra-list-diversity', 'Cosine Similarity', 'Wilcoxon Signed Ranks Test', 'nDCG']
+]
+COLS_ACCURACY = [c.title() for c in ['Click-Through-Rate', 'Accuracy', 'Precision', 'Recall', 'F1']]
+molten_data = data.melt(id_vars=[C_TITLE, C_TYPE_PAPER, C_PLATFORM, C_YEAR] + COLS_METRICS, value_vars=COLS_VALUES, var_name=C_VALUE, value_name=C_MENTIONS)
 molten_data[C_VALUE_GROUP] = ""
 molten_data.loc[molten_data[C_VALUE].isin(COLS_USER_EXPERIENCE), C_VALUE_GROUP] = C_GRP_UX
 molten_data.loc[molten_data[C_VALUE].isin(COLS_NEWS_VALUES + COLS_NEWS_RECOMMENDER_SPECIFIC), C_VALUE_GROUP] = C_GRP_NEWS
@@ -167,19 +187,26 @@ molten_data.loc[molten_data[C_VALUE].isin(COLS_RESPONSIBILITY + COLS_RESPONSIBIL
 molten_data.loc[molten_data[C_VALUE].isin(COLS_GOTO), C_VALUE_GROUP] = C_GRP_GOTO
 molten_data.loc[molten_data[C_VALUE].isin(COLS_TECHNICAL), C_VALUE_GROUP] = C_GRP_TECHNICAL
 molten_data = molten_data.sort_values([C_VALUE_GROUP, C_YEAR])
-COLS_METRICS = [
-    c.title() for c in ['Click-Through-Rate', 'Accuracy', 'Precision', 'Recall', 'F1', 'Intra-list-diversity', 'Cosine Similarity', 'Wilcoxon Signed Ranks Test', 'nDCG']
-]
-COLS_ACCURACY = [c.title() for c in ['Click-Through-Rate', 'Accuracy', 'Precision', 'Recall', 'F1']]
+molten_data[C_METRICS_ACC] = molten_data[COLS_METRICS_ACC].sum(axis=1)
+molten_data[C_METRICS_CTR] = molten_data[COLS_METRICS_CTR].sum(axis=1)
+molten_data[C_METRICS_RANK] = molten_data[COLS_METRICS_RANK].sum(axis=1)
+molten_data[C_METRICS_DIVERSITY] = molten_data[COLS_METRICS_DIVERSITY].sum(axis=1)
+molten_data = molten_data.drop(COLS_METRICS, axis=1)
 molten_data
 # %%
 corr_matrix = data[COLS_VALUES].corr()
 corr_matrix
 # %%
-plt.figure(figsize=(15, 10))
-sns.heatmap(data[COLS_VALUES].corr())
-plt.savefig('figs/lit_rev_value_correlations.png')
-plt.show()
+thresh = [0, 1, 3, 5, 10]
+for i in thresh:
+    fig, ax = plt.subplots(figsize=(12, 10))
+    corr_data = data.copy()
+    non_unique_values = [col for col, decision in (corr_data[COLS_VALUES].sum(axis=0) > i).items() if decision]
+    sns.heatmap(corr_data[non_unique_values].corr())
+    fig.suptitle(f'Correlation of Values with at least {i} appearances.')
+    fig.tight_layout()
+    plt.savefig(f'figs/lit_rev_value_correlations_with_threshold_{i}.png')
+    plt.show()
 # %%
 fig, ax = plt.subplots(figsize=(15, 8))
 sns.barplot(
@@ -210,10 +237,11 @@ plt.show()
 shortened_data = molten_data[molten_data[C_MENTIONS] > 0]
 # pivoted_data = shortened_data.groupby([C_TITLE, C_TYPE_PAPER, C_VALUE_GROUP]).max().reset_index().groupby([C_TYPE_PAPER, C_VALUE_GROUP]).sum().reset_index().pivot(index=C_TYPE_PAPER, columns=C_VALUE_GROUP, values=C_MENTIONS)
 pivoted_data = shortened_data.groupby([C_TYPE_PAPER, C_VALUE_GROUP]).sum().reset_index().pivot(index=C_TYPE_PAPER, columns=C_VALUE_GROUP, values=C_MENTIONS)
-fig, ax = plt.subplots(figsize=(15, 10))
+fig, ax = plt.subplots(figsize=(12, 6))
 pivoted_data.plot(kind='bar', stacked=False, ax=ax)  #.set_index(C_TYPE_PAPER)[C_VALUE_GROUP].plot(kind='hist', stacked=True)
 for container in ax.containers:
     ax.bar_label(container, label_type='edge', padding=5)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
 fig.suptitle('Count of Value Contributions per Paper Type')
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_value_group_by_paper_type.png')
@@ -238,10 +266,11 @@ plt.show()
 
 # %%
 pivoted_data_T = pivoted_data.T
-fig, ax = plt.subplots(figsize=(15, 11))
+fig, ax = plt.subplots(figsize=(12, 6))
 pivoted_data_T.plot(kind='bar', stacked=False, ax=ax)  #.set_index(C_TYPE_PAPER)[C_VALUE_GROUP].plot(kind='hist', stacked=True)
 for container in ax.containers:
     ax.bar_label(container, label_type='edge', padding=5)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
 ax.legend(loc='upper right')
 fig.suptitle('Count of Paper Types per Value Contribution')
 fig.tight_layout()
@@ -288,8 +317,6 @@ fig.suptitle('Count of Platforms')
 plt.savefig('figs/lit_rev_count_platforms.png')
 plt.show()
 
-
-
 # %%
 grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -308,18 +335,42 @@ ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
 # ax.yaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(1))
 # ax.tick_params(axis='y', which='minor', bottom=False)
+# ax.set_xlim(data[C_YEAR].min(), data[C_YEAR].max() - pd.DateOffset(years=1))
 ax.grid(axis='y', )
 fig.suptitle("Sum of Value Contributions over Time")
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_over_time.png')
 plt.show()
+# %%
+grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
+fig, ax = plt.subplots(figsize=(12, 6))
+ax = sns.lineplot(
+    data=grouped_time_data,
+    x=C_YEAR,
+    y=C_MENTIONS,
+    hue=C_VALUE_GROUP,
+    ax=ax,
+)
 
+sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
+ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
+ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+# ax.yaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(1))
+# ax.tick_params(axis='y', which='minor', bottom=False)
+ax.set_xlim(data[C_YEAR].min(), data[C_YEAR].max() - pd.DateOffset(years=1))
+ax.grid(axis='y', )
+fig.suptitle("Sum of Value Contributions over Time (until 2021)")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_count_over_time_only_completed_years.png')
+plt.show()
 
 # %%
 df_all_pre_screening = pd.read_csv('data_literature_review/data_pre_screening.csv')
 df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y")
 df_all_pre_screening[C_TITLE] = df_all_pre_screening["title"]
-df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >=  data[C_YEAR].min()]
+df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >= data[C_YEAR].min()]
 df_all_pre_screening
 
 grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
@@ -342,12 +393,38 @@ fig.suptitle("Count of Value Contributing Papers compared to News RS literature 
 fig.tight_layout()
 plt.savefig('figs/lit_rev_count_nrs_over_time.png')
 plt.show()
+# %%
+df_all_pre_screening = pd.read_csv('data_literature_review/data_pre_screening.csv')
+df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y")
+df_all_pre_screening[C_TITLE] = df_all_pre_screening["title"]
+df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >= data[C_YEAR].min()]
+df_all_pre_screening
+
+grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
+fig, ax = plt.subplots(figsize=(12, 6))
+# ax = sns.lineplot(
+#     data=grouped_time_data,
+#     x=C_YEAR,
+#     y=C_MENTIONS,
+#     hue=C_VALUE_GROUP,
+#     ax=ax,
+# )
+proportion_data = (data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count() / df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count()) * 100
+sns.lineplot(data=proportion_data, x=C_YEAR, y=C_TITLE, label="Proportion of Value-Driven News Recommender Papers published")
+# sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
+ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
+ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+ax.grid(axis='y')
+ax.set_ylabel('Percentage of value contributing papers against all news recommender paper')
+fig.suptitle("Proportion of Value Contributing Papers compared to News RS literature over Time")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_count_proportions_over_time.png')
+plt.show()
 
 # %%
 # fig, ax = plt.subplots(figsize=(12, 6))
 
 # %%
-
 
 
 # https://deffro.github.io/time%20series/exploratory%20data%20analysis/data%20visualization/time-series-analysis/
@@ -463,34 +540,58 @@ sns.heatmap(tmp)
 plt.savefig('figs/lit_rev_metric_v_values_cooc_normed_by_metric.png')
 plt.show()
 # %%
-data
+molten_data.pivot(index=[
+    C_TITLE,
+    # C_YEAR,
+    C_VALUE,
+    C_METRICS_ACC,
+    C_METRICS_CTR,
+    C_METRICS_DIVERSITY,
+    C_METRICS_RANK,
+], columns=C_VALUE_GROUP, values=C_MENTIONS).reset_index()
+
 # %%
 
-fig, (ax1, ax2) = plt.subplots(1,2, figsize=(12, 6), squeeze=True)
-tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
-tmp_counts = pd.value_counts(tmp['Diversity-Type'])
-sns.lineplot(data=tmp.groupby([C_YEAR, 'Diversity-Type']).count(), x=C_YEAR, y=C_TITLE, hue='Diversity-Type', ax=ax1)
-sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>1].index, ax=ax2)
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12), squeeze=True)
+exploded_data = data[[C_YEAR, C_TITLE, C_DIVERSITY_TYPE]]
+exploded_data = exploded_data.explode(C_DIVERSITY_TYPE)
+tmp_counts = pd.value_counts(exploded_data[C_DIVERSITY_TYPE])
+sns.lineplot(data=exploded_data.groupby([C_YEAR, C_DIVERSITY_TYPE]).count(), x=C_YEAR, y=C_TITLE, hue=C_DIVERSITY_TYPE, ax=ax1)
+sns.countplot(exploded_data[C_DIVERSITY_TYPE], order=tmp_counts[tmp_counts > 1].index, ax=ax2)
 ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45, ha='center')
-
+fig.suptitle("Diversity-Type over Time and in absolute Counts")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_diversity_type_counts_double_plot.png')
 # %%
-fig, ax = plt.subplots(1,1, figsize=(12, 6), squeeze=True)
-tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
-tmp_counts = pd.value_counts(tmp['Diversity-Type'])
-sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>=1].index, ax=ax)
+fig, ax = plt.subplots(1, 1, figsize=(12, 6), squeeze=True)
+sns.countplot(x=exploded_data[C_DIVERSITY_TYPE], order=tmp_counts[tmp_counts >= 1].index, ax=ax)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='center')
 ax.bar_label(ax.containers[0], label_type='edge', padding=5)
-fig.suptitle("Co-Occurences of Value Contributions over Time")
+fig.suptitle("Diversity-Type in absolute Counts")
 fig.tight_layout()
-plt.savefig('figs/lit_rev_diversity_type_counts_ugly.png')
+plt.savefig('figs/lit_rev_diversity_type_counts_all.png')
 # %%
-fig, ax = plt.subplots(1,1, figsize=(12, 6), squeeze=True)
-tmp = data[[C_YEAR, C_TITLE, 'Diversity-Type']]
-tmp_counts = pd.value_counts(tmp['Diversity-Type'])
-sns.countplot(tmp['Diversity-Type'], order=tmp_counts[tmp_counts>1].index, ax=ax)
+mini_counts = (exploded_data[C_DIVERSITY_TYPE].value_counts() < 2)
+summarised_exploded_data = exploded_data.copy()
+cols_to_group = mini_counts[mini_counts == True].index
+summarised_exploded_data[summarised_exploded_data[C_DIVERSITY_TYPE].isin(cols_to_group)] = "Other"
+fig, ax = plt.subplots(1, 1, figsize=(12, 6), squeeze=True)
+sns.countplot(x=summarised_exploded_data[C_DIVERSITY_TYPE], ax=ax)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='center')
 ax.bar_label(ax.containers[0], label_type='edge', padding=5)
-fig.suptitle("Co-Occurences of Value Contributions over Time")
+fig.suptitle("Diversity-Type in absolute Counts")
 fig.tight_layout()
-plt.savefig('figs/lit_rev_diversity_type_counts.png')
+plt.savefig('figs/lit_rev_diversity_type_counts_more_than_1.png')
 plt.show()
+# %%
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12), squeeze=True)
+exploded_data = data[[C_YEAR, C_TITLE, C_EVALUATION_TYPE]]
+exploded_data = exploded_data.explode(C_EVALUATION_TYPE)
+tmp_counts = pd.value_counts(exploded_data[C_EVALUATION_TYPE])
+sns.lineplot(data=exploded_data.groupby([C_YEAR, C_EVALUATION_TYPE]).count(), x=C_YEAR, y=C_TITLE, hue=C_EVALUATION_TYPE, ax=ax1)
+sns.countplot(exploded_data[C_EVALUATION_TYPE], ax=ax2)
+ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45, ha='center')
+fig.suptitle("Evaluation-Type over Time and in absolute Counts")
+fig.tight_layout()
+plt.savefig('figs/lit_rev_evaluation_type_counts_double_plot.png')
+# %%
