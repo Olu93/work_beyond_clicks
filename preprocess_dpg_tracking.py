@@ -111,7 +111,7 @@ class ProgressPercentage(object):
 # %%
 counter = collections.defaultdict(int)
 collector = collections.deque()
-limit = 10000
+limit = 100000
 update_freq = 500
 pbar = tqdm.tqdm(range(limit), total=limit)
 with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=FILE_NAME)["Body"]) as gzipfile:
@@ -120,27 +120,27 @@ with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=FILE_NAM
         
         tmp_dict = json.loads(l)
         ev_name = tmp_dict.get('EVENT_NAME')
-        # tmp_dict["QUASI_USER_ID"] = tmp_dict.get("ANDROID_ID") or tmp_dict.get("APPLE_ID") or tmp_dict.get("PRIVACYWALL_ID") or ""
-        # tmp_dict["QUASI_USER_ID"] = tmp_dict.get("APP_ID", "no-app") + "-" + tmp_dict.get("QUASI_USER_ID", "") 
-        # if "GEO_REGION" in tmp_dict:
-        #     del tmp_dict["GEO_REGION"]
-        # if "GEO_REGION_NAME" in tmp_dict:
-        #     del tmp_dict["GEO_REGION_NAME"]
-        # if "GEO_ZIPCODE" in tmp_dict:
-        #     del tmp_dict["GEO_ZIPCODE"]
-        # # del tmp_dict["PLATFORM"]
-        # # del tmp_dict["PRIVACYWALL_ID"]
-        # # del tmp_dict["PRIVACY_SETTINGS"]
-        # if "REFR_URLHOST" in tmp_dict:
-        #     del tmp_dict["REFR_URLHOST"]
-        # if "PAGE_REFERRER" in tmp_dict:
-        #     del tmp_dict["PAGE_REFERRER"]
-        # if "PAGE_URLHOST" in tmp_dict:
-        #     del tmp_dict["PAGE_URLHOST"]
-        # if "SE_VALUE" in tmp_dict:
-        #     del tmp_dict["SE_VALUE"]
-        # if "SE_CATEGORY" in tmp_dict:
-        #     del tmp_dict["SE_CATEGORY"]
+        tmp_dict["QUASI_USER_ID"] = tmp_dict.get("ANDROID_ID") or tmp_dict.get("APPLE_ID") or tmp_dict.get("PRIVACYWALL_ID") or ""
+        tmp_dict["QUASI_USER_ID"] = tmp_dict.get("APP_ID", "no-app") + "-" + tmp_dict.get("QUASI_USER_ID", "") 
+        if "GEO_REGION" in tmp_dict:
+            del tmp_dict["GEO_REGION"]
+        if "GEO_REGION_NAME" in tmp_dict:
+            del tmp_dict["GEO_REGION_NAME"]
+        if "GEO_ZIPCODE" in tmp_dict:
+            del tmp_dict["GEO_ZIPCODE"]
+        # del tmp_dict["PLATFORM"]
+        # del tmp_dict["PRIVACYWALL_ID"]
+        # del tmp_dict["PRIVACY_SETTINGS"]
+        if "REFR_URLHOST" in tmp_dict:
+            del tmp_dict["REFR_URLHOST"]
+        if "PAGE_REFERRER" in tmp_dict:
+            del tmp_dict["PAGE_REFERRER"]
+        if "PAGE_URLHOST" in tmp_dict:
+            del tmp_dict["PAGE_URLHOST"]
+        if "SE_VALUE" in tmp_dict:
+            del tmp_dict["SE_VALUE"]
+        if "SE_CATEGORY" in tmp_dict:
+            del tmp_dict["SE_CATEGORY"]
         # Ask about SE ACTIONS
         collector.append(tmp_dict)
         counter[ev_name] += 1
