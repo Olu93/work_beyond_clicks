@@ -61,7 +61,7 @@ data[all_relevant_cols] = data[all_relevant_cols].fillna(0)
 data[all_relevant_cols] = data[all_relevant_cols].infer_objects()
 data[all_relevant_cols] = data[all_relevant_cols].astype(float)
 data = data[data['Not Relevant'] == 0].drop('Not Relevant', axis=1)
-data[C_TYPE_PAPER] = data[C_TYPE_PAPER].str.title()
+data[C_TYPE_PAPER] = data[C_TYPE_PAPER].str.title().replace("Conceptual/Analysis", "Conceptual").replace("Conceptual/Review", "Conceptual")
 data[C_YEAR] = pd.to_datetime(data[C_YEAR].astype(str), format="%Y")
 data[C_DIVERSITY_TYPE] = data[C_DIVERSITY_TYPE].str.split(',')
 data[C_EVALUATION_TYPE] = data[C_EVALUATION_TYPE].str.split(',')
@@ -219,11 +219,11 @@ for i in thresh:
 # %%
 fig, ax = plt.subplots(figsize=(15, 8))
 sns.barplot(
-    data=molten_data,
+    data=molten_data.groupby([C_VALUE, C_VALUE_GROUP]).sum().reset_index().sort_values([C_VALUE_GROUP, C_MENTIONS]),
     y=C_VALUE,
     x=C_MENTIONS,
     hue=C_VALUE_GROUP,
-    estimator=sum,
+    # estimator=sum,
     orient="h",
     ax=ax,
     ci=None,
@@ -330,14 +330,23 @@ plt.show()
 grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
 fig, ax = plt.subplots(figsize=(12, 6))
 ax = sns.lineplot(
-    data=grouped_time_data,
+    data=grouped_time_data[grouped_time_data[C_YEAR] <= data[C_YEAR].max() - pd.DateOffset(years=1)],
     x=C_YEAR,
     y=C_MENTIONS,
     hue=C_VALUE_GROUP,
     ax=ax,
 )
+ax = sns.lineplot(
+    data=grouped_time_data[grouped_time_data[C_YEAR] >= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_MENTIONS,
+    hue=C_VALUE_GROUP,
+    ax=ax,
+    linestyle="-.",
+    legend=None,
+)
 
-sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle=":")
 # sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
 # sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
@@ -351,43 +360,84 @@ fig.tight_layout()
 plt.savefig('figs/lit_rev_count_over_time.png')
 plt.show()
 # %%
-grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
+grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index().merge(data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count().reset_index(),
+                                                                                           left_on=C_YEAR,
+                                                                                           right_on=C_YEAR)
+grouped_time_data[C_MENTIONS] /= grouped_time_data[C_TITLE]
 fig, ax = plt.subplots(figsize=(12, 6))
 ax = sns.lineplot(
-    data=grouped_time_data,
+    data=grouped_time_data[grouped_time_data[C_YEAR] <= data[C_YEAR].max() - pd.DateOffset(years=1)],
     x=C_YEAR,
     y=C_MENTIONS,
     hue=C_VALUE_GROUP,
     ax=ax,
 )
+ax = sns.lineplot(
+    data=grouped_time_data[grouped_time_data[C_YEAR] >= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_MENTIONS,
+    hue=C_VALUE_GROUP,
+    ax=ax,
+    linestyle="-.",
+    legend=None,
+)
 
-sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
-# sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# sns.lineplot(data=, x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
 # sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-# ax.yaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(1))
-# ax.tick_params(axis='y', which='minor', bottom=False)
-ax.set_xlim(data[C_YEAR].min(), data[C_YEAR].max() - pd.DateOffset(years=1))
 ax.grid(axis='y', )
-fig.suptitle("Sum of Value Contributions over Time (until 2021)")
+fig.suptitle("Sum of Value Contribution Proportions over Time")
 fig.tight_layout()
-plt.savefig('figs/lit_rev_count_over_time_only_completed_years.png')
+plt.savefig('figs/lit_rev_count_proportions_over_time.png')
 plt.show()
+# %%
+# grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
+# fig, ax = plt.subplots(figsize=(12, 6))
+# ax = sns.lineplot(
+#     data=grouped_time_data,
+#     x=C_YEAR,
+#     y=C_MENTIONS,
+#     hue=C_VALUE_GROUP,
+#     ax=ax,
+# )
+
+# sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# # sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of relevant Papers published", color='Grey', linestyle="-.")
+# # sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
+# ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
+# ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
+# # ax.yaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(1))
+# # ax.tick_params(axis='y', which='minor', bottom=False)
+# ax.set_xlim(data[C_YEAR].min(), data[C_YEAR].max() - pd.DateOffset(years=1))
+# ax.grid(axis='y', )
+# fig.suptitle("Sum of Value Contributions over Time (until 2021)")
+# fig.tight_layout()
+# plt.savefig('figs/lit_rev_count_over_time_only_completed_years.png')
+# plt.show()
 # %%
 grouped_time_data = molten_data.groupby([C_YEAR]).sum().div(36).reset_index().melt([C_YEAR], COLS_METRICS_GRP, value_name=C_MENTIONS, var_name=C_METRICS_GROUP)
 fig, ax = plt.subplots(figsize=(12, 6))
 ax = sns.lineplot(
-    data=grouped_time_data,
+    data=grouped_time_data[grouped_time_data[C_YEAR] <= data[C_YEAR].max() - pd.DateOffset(years=1)],
     x=C_YEAR,
     y=C_MENTIONS,
     hue=C_METRICS_GROUP,
     ax=ax,
 )
+ax = sns.lineplot(
+    data=grouped_time_data[grouped_time_data[C_YEAR] >= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_MENTIONS,
+    hue=C_METRICS_GROUP,
+    ax=ax,
+    linestyle="-.",
+    legend=None,
+)
 
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-ax.set_xlim(data[C_YEAR].min(), data[C_YEAR].max() - pd.DateOffset(years=1))
+# ax.set_xlim(data[C_YEAR].min(), data[C_YEAR].max() - pd.DateOffset(years=1))
 ax.grid(axis='y', )
 fig.suptitle("Sum of Metric Uses over Time (until 2021)")
 fig.tight_layout()
@@ -400,8 +450,7 @@ df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astyp
 df_all_pre_screening[C_TITLE] = df_all_pre_screening["title"]
 df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >= data[C_YEAR].min()]
 df_all_pre_screening
-
-grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
+# grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
 fig, ax = plt.subplots(figsize=(12, 6))
 # ax = sns.lineplot(
 #     data=grouped_time_data,
@@ -411,8 +460,45 @@ fig, ax = plt.subplots(figsize=(12, 6))
 #     ax=ax,
 # )
 
-sns.lineplot(data=data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of News Recommeder Papers published")
-sns.lineplot(data=df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count(), x=C_YEAR, y=C_TITLE, label="No. of Value-Driven News Recommender Papers published")
+df_pre_screening = df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count()
+df_post_screening = data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count()
+ax = sns.lineplot(
+    data=df_pre_screening[df_pre_screening.index <= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_TITLE,
+    color="blue",
+    label="No. of News Recommeder Papers published",
+    ax=ax,
+)
+ax = sns.lineplot(
+    data=df_pre_screening[df_pre_screening.index >= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_TITLE,
+    color="blue",
+    # label="No. of News Recommeder Papers published",
+    linestyle="-.",
+    legend=None,
+    ax=ax,
+)
+ax = sns.lineplot(
+    data=df_post_screening[df_post_screening.index <= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_TITLE,
+    color="red",
+    label="No. of Value-Driven News Recommender Papers published",
+    ax=ax,
+)
+ax = sns.lineplot(
+    data=df_post_screening[df_post_screening.index >= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_TITLE,
+    color="red",
+    # label="No. of Value-Driven News Recommender Papers published",
+    linestyle="-.",
+    legend=None,
+    ax=ax,
+)
+
 # sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
@@ -431,8 +517,25 @@ df_all_pre_screening
 grouped_time_data = molten_data.groupby([C_YEAR, C_VALUE_GROUP]).sum().reset_index()
 fig, ax = plt.subplots(figsize=(12, 6))
 
-proportion_data = (data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count() / df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count()) * 100
-sns.lineplot(data=proportion_data, x=C_YEAR, y=C_TITLE, label="Proportion of Value-Driven News Recommender Papers published")
+proportion_data = ((data[[C_YEAR, C_TITLE]].groupby(C_YEAR).count() / df_all_pre_screening[[C_YEAR, C_TITLE]].groupby(C_YEAR).count())) * 100
+ax = sns.lineplot(
+    data=proportion_data[proportion_data.index <= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_TITLE,
+    color="blue",
+    label="Proportion of Value-Driven News Recommender Papers published",
+    ax=ax,
+)
+ax = sns.lineplot(
+    data=proportion_data[proportion_data.index >= data[C_YEAR].max() - pd.DateOffset(years=1)],
+    x=C_YEAR,
+    y=C_TITLE,
+    color="blue",
+    # label="Proportion of Value-Driven News Recommender Papers published",
+    linestyle="-.",
+    legend=None,
+    ax=ax,
+)
 # sns.lineplot(data=grouped_time_data.groupby(C_YEAR).mean(), x=C_YEAR, y=C_MENTIONS, label="Mean Value Contributions", color='Black', linestyle="-.")
 ax.xaxis.set_major_locator(matplotlib.dates.YearLocator(base=2))
 ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
