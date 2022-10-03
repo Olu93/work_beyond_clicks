@@ -41,7 +41,7 @@ C_METRICS_CTR = "Metric: CTR & nDCG"
 C_METRICS_OTHER = "Metric: Others"
 C_METRICS_DIVERSITY = "Metric: ILL"
 
-data = pd.read_csv(io.open('data_literature_review/data_post_screening.csv', 'r', encoding='utf-8'))
+data = pd.read_csv(io.open('data_literature_review/data_post_screening_corrected.csv', 'r', encoding='utf-8'))
 data = data.set_index("ID")
 data = data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 data = data[[col for col in data.columns if not ("Spalte" in col)]]
@@ -62,7 +62,7 @@ data[all_relevant_cols] = data[all_relevant_cols].infer_objects()
 data[all_relevant_cols] = data[all_relevant_cols].astype(float)
 data = data[data['Not Relevant'] == 0].drop('Not Relevant', axis=1)
 data[C_TYPE_PAPER] = data[C_TYPE_PAPER].str.title().replace("Conceptual/Analysis", "Conceptual").replace("Conceptual/Review", "Conceptual")
-data[C_YEAR] = pd.to_datetime(data[C_YEAR].astype(str), format="%Y")
+data[C_YEAR] = pd.to_datetime(data[C_YEAR].astype(str), format="%Y") + pd.DateOffset(years=1)
 data[C_DIVERSITY_TYPE] = data[C_DIVERSITY_TYPE].str.split(',')
 data[C_EVALUATION_TYPE] = data[C_EVALUATION_TYPE].str.split(',')
 data = data.sort_values(C_YEAR)
@@ -446,7 +446,7 @@ plt.show()
 
 # %%
 df_all_pre_screening = pd.read_csv('data_literature_review/data_pre_screening.csv')
-df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y")
+df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y") + pd.DateOffset(years=1)
 df_all_pre_screening[C_TITLE] = df_all_pre_screening["title"]
 df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >= data[C_YEAR].min()]
 df_all_pre_screening
@@ -509,7 +509,7 @@ plt.savefig('figs/lit_rev_count_nrs_over_time.png')
 plt.show()
 # %%
 df_all_pre_screening = pd.read_csv('data_literature_review/data_pre_screening.csv')
-df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y")
+df_all_pre_screening[C_YEAR] = pd.to_datetime(df_all_pre_screening["year"].astype(str), format="%Y") + pd.DateOffset(years=1)
 df_all_pre_screening[C_TITLE] = df_all_pre_screening["title"]
 df_all_pre_screening = df_all_pre_screening[df_all_pre_screening[C_YEAR] >= data[C_YEAR].min()]
 df_all_pre_screening
