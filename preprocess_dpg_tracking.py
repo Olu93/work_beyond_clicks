@@ -110,53 +110,82 @@ class ProgressPercentage(object):
 # decompressed
 # %%
 counter = collections.defaultdict(int)
-collector = collections.deque()
+view_collector = collections.deque()
+interaction_collector = collections.deque()
+geo_mapping = collections.defaultdict(str)
+city_mapping = collections.defaultdict(lambda: len(city_mapping)+1)
 limit = 100000
-update_freq = 500
+update_freq = 1000
 pbar = tqdm.tqdm(range(limit), total=limit)
 with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=FILE_NAME)["Body"]) as gzipfile:
     content = TextIOWrapper(gzipfile)
     for cnt, l in enumerate(content):
         
         tmp_dict = json.loads(l)
-        ev_name = tmp_dict.get('EVENT_NAME')
-        tmp_dict["QUASI_USER_ID"] = tmp_dict.get("ANDROID_ID") or tmp_dict.get("APPLE_ID") or tmp_dict.get("PRIVACYWALL_ID") or ""
-        tmp_dict["QUASI_USER_ID"] = tmp_dict.get("APP_ID", "no-app") + "-" + tmp_dict.get("QUASI_USER_ID", "") 
-        if "GEO_REGION" in tmp_dict:
-            del tmp_dict["GEO_REGION"]
-        if "GEO_REGION_NAME" in tmp_dict:
-            del tmp_dict["GEO_REGION_NAME"]
-        if "GEO_ZIPCODE" in tmp_dict:
-            del tmp_dict["GEO_ZIPCODE"]
-        # del tmp_dict["PLATFORM"]
-        # del tmp_dict["PRIVACYWALL_ID"]
-        # del tmp_dict["PRIVACY_SETTINGS"]
+        ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
+        tmp_dict["QUASI_USER_ID"] = tmp_dict.pop("ANDROID_ID", None) or tmp_dict.pop("APPLE_ID", None) or tmp_dict.pop("PRIVACYWALL_ID", None) or ""
+        tmp_dict["IS_LOGGED_IN"] = (tmp_dict.pop("GIGYA_ID", None) is not None)*1
+        geo_mapping[tmp_dict.pop("GEO_REGION", None)] = (tmp_dict.pop("GEO_REGION_NAME", None),tmp_dict.pop("GEO_TIMEZONE", None)) 
+        city_mapping[tmp_dict.get("GEO_CITY", None)]    
+        tmp_dict["GEO_CITY"] = city_mapping[tmp_dict.get("GEO_CITY", None)]
+        
+        if "DVCE_CREATED_TSTAMP" in tmp_dict:
+            del tmp_dict["DVCE_CREATED_TSTAMP"]
+        if "DOMAIN_USERID" in tmp_dict:
+            del tmp_dict["DOMAIN_USERID"]
+        if "DOMAIN_SESSIONID" in tmp_dict:
+            del tmp_dict["DOMAIN_SESSIONID"]
         if "REFR_URLHOST" in tmp_dict:
             del tmp_dict["REFR_URLHOST"]
+        if "PLATFORM" in tmp_dict:
+            del tmp_dict["PLATFORM"]
+        if "PAGE_TITLE" in tmp_dict:
+            del tmp_dict["PAGE_TITLE"]
+        if "PAGE_TYPE" in tmp_dict:
+            del tmp_dict["PAGE_TYPE"]
         if "PAGE_REFERRER" in tmp_dict:
             del tmp_dict["PAGE_REFERRER"]
         if "PAGE_URLHOST" in tmp_dict:
             del tmp_dict["PAGE_URLHOST"]
-        if "SE_VALUE" in tmp_dict:
-            del tmp_dict["SE_VALUE"]
-        if "SE_CATEGORY" in tmp_dict:
-            del tmp_dict["SE_CATEGORY"]
-        # Ask about SE ACTIONS
-        collector.append(tmp_dict)
+        if "PAGE_URLPATH" in tmp_dict:
+            del tmp_dict["PAGE_URLPATH"]
+        if "PRIVACY_SETTINGS" in tmp_dict:
+            psettings = tmp_dict["PRIVACY_SETTINGS"]
+            tmp_dict["privacy_functional"] = ("functional" in psettings)*1
+            tmp_dict["privacy_analytics"] = ("analytics" in psettings)*1
+            tmp_dict["privacy_target_advertising"] = ("target_advertising" in psettings)*1
+            tmp_dict["privacy_personalisation"] = ("personalisation" in psettings)*1
+            tmp_dict["privacy_non-personalised_ads"] = ("non-personalised_ads" in psettings)*1
+            tmp_dict["privacy_marketing"] = ("marketing" in psettings)*1
+            tmp_dict["privacy_social_media"] = ("social_media" in psettings)*1
+            tmp_dict["privacy_geo_location"] = ("geo_location" in psettings)*1
+            tmp_dict["privacy_advertising"] = ("advertising_" in psettings)*1
+            del tmp_dict["PRIVACY_SETTINGS"]
+        if ev_name in ["screen_view", "page_view"]:
+            if "SE_VALUE" in tmp_dict:
+                del tmp_dict["SE_VALUE"]
+            if "SE_CATEGORY" in tmp_dict:
+                del tmp_dict["SE_CATEGORY"]
+            if "SE_LABEL" in tmp_dict:
+                del tmp_dict["SE_LABEL"]
+            if "SE_ACTION" in tmp_dict:
+                del tmp_dict["SE_ACTION"]
+            view_collector.append(tmp_dict)
+        else:
+            interaction_collector.append(tmp_dict)            
         counter[ev_name] += 1
         if ((cnt+1)%update_freq) == 0:
             pbar.update(update_freq)
-            # pbar.flush()
-            # sys.stdout.flush()
         if cnt > limit:
             break
+
 pbar.close()        
 counter
 # %%
-df = pd.DataFrame(collector)
+df = pd.DataFrame(view_collector)
 df.head(5)
 # %%
-
+df.to_csv("data_dpg_testdata/example_reduction.csv")
 
 # %%
 for col in df.columns:
