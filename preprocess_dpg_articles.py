@@ -50,7 +50,7 @@ interaction_collector = collections.deque()
 geo_mapping = collections.defaultdict(str)
 city_mapping = collections.defaultdict(lambda: len(city_mapping)+1)
 limit = 10000
-update_freq = 1
+update_freq = 5
 
 
 def filter_article(tmp_dict):
@@ -68,28 +68,34 @@ def reduce_article(orig_dict):
     new_dict['title'] = tmp_dict['title']
     new_dict['text'] = tmp_dict['text_cleaned']
     new_dict['authors'] = tmp_dict['authors']
-    # new_dict['url'] = orig_dict['url']
+    new_dict['url'] = tmp_dict.get_str('url')
     new_dict['main_section'] = tmp_dict['section.main_section']
-    new_dict['sub_section'] = tmp_dict.get('section.sub_section')
-    new_dict['num_words'] = tmp_dict['num_words']
-    new_dict['num_sentences'] = tmp_dict['enrichments.num_sentences']
-    new_dict['num_chars'] = tmp_dict['enrichments.raw_character_count']
-    # new_dict['sub_section'] = tmp_dict['section.sub_section']
+    new_dict['sub_section'] = tmp_dict.get_str('section.sub_section')
+    new_dict['num_words'] = tmp_dict.get_int('enrichments.num_words')
+    new_dict['num_sentences'] = tmp_dict.get_int('enrichments.num_sentences')
+    new_dict['num_chars'] = tmp_dict.get_int('enrichments.raw_character_count')
+    new_dict['first_publication_timestamp'] = tmp_dict.get_datetime('first_publication_ts')
+    new_dict['categories_generated'] = tmp_dict.get_str_list('categories')
+    new_dict['categories_curated'] = tmp_dict.get_str_list('source_keywords')
+    new_dict['categories_textrazor'] = [dict(score=d['score'], label=d['label']) for  d in tmp_dict.get_list('enrichments.categories')]
+    new_dict['topics_curated'] = [dict(score=d['score'], name=d['label']) for  d in tmp_dict.get_list('enrichments.topics')]
+    new_dict['topics_generated'] = tmp_dict.get_dict('enrichments.ci_topics_v2')
+    new_dict['brand_safety'] = tmp_dict.get_dict('enrichments.brand_safety')
     
-    return tmp_dict
+    return new_dict
 
 
 
-for file_name in tqdm.tqdm(file_list, desc="File"):
-    with tqdm.tqdm(None, desc="Lines") as pbar:
-        gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
-        content = TextIOWrapper(gzipfile)
-        for cnt, l in enumerate(content):
-            tmp_dict = benedict(l)
-            raw_collector.append(tmp_dict.copy())
-            tmp_dict = reduce_article(tmp_dict)
-            if ((cnt+1)%update_freq) == 0:
-                pbar.update(update_freq)
+for file_name in tqdm.tqdm(file_list[:2], desc="File"):
+    gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
+    content = TextIOWrapper(gzipfile)
+    for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines"):
+        tmp_dict = benedict(l)
+        raw_collector.append(tmp_dict.copy())
+        tmp_dict = reduce_article(tmp_dict)
+        view_collector.append(tmp_dict)
+        # if ((cnt+1)%update_freq) == 0:
+        #     pbar.update(update_freq)
         # if cnt > limit:
         #     break
 
@@ -100,46 +106,7 @@ df_raw = pd.DataFrame(raw_collector)
 # df_views.to_csv("data_dpg_testdata/reduced_views2.csv", index=None)
 # df_interactions.to_csv("data_dpg_testdata/reduced_interactions2.csv", index=None)
 # df_raw.to_csv("data_dpg_testdata/raw2.csv", index=None)
-# %%
-limit = None
-update_freq = 10000
-for file_name in file_list:
-    pbar = tqdm.tqdm(range(limit) if limit else None, total=limit)
-    with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
-        with io.open(f"./data_dpg_testdata/reduced_views-{file_name.stem}.csv", "w") as file_reduced_views:
-            with io.open(f"./data_dpg_testdata/reduced_interactions-{file_name.stem}.csv", "w") as file_reduced_interactions:
-                writer_reduced_views = csv.DictWriter(file_reduced_views, fieldnames=list(df_views.columns))
-                writer_reduced_interactions = csv.DictWriter(file_reduced_interactions, fieldnames=list(df_interactions.columns))
-                writer_reduced_views.writeheader()
-                writer_reduced_interactions.writeheader()
-                content = TextIOWrapper(gzipfile)
-                for cnt, l in enumerate(content):
-                    tmp_dict = json.loads(l)
-                    # raw_collector.append(tmp_dict.copy())
-                    ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
-                    tmp_dict = reduce_article(geo_mapping, city_mapping, tmp_dict)
-                    if ev_name in ["screen_view", "page_view"]:
-                        # view_collector.append(tmp_dict)
-                        writer_reduced_views.writerow(tmp_dict)
-                    else:
-                        # interaction_collector.append(tmp_dict)            
-                        writer_reduced_interactions.writerow(tmp_dict)
-                    counter[ev_name] += 1
-                    if ((cnt+1)%update_freq) == 0:
-                        pbar.update(update_freq)
-                    # if cnt > limit:
-                    #     break
 
-    pbar.close()        
-counter
-# %%
-
-# df_views.to_csv("data_dpg_testdata/reduced_views.csv", index=None)
-# df_interactions.to_csv("data_dpg_testdata/reduced_interactions.csv", index=None)
-# df_raw.to_csv("data_dpg_testdata/raw.csv", index=None)
-json.dump(geo_mapping, io.open("data_dpg_testdata/mapping_geo.json", "w"))
-json.dump(city_mapping, io.open("data_dpg_testdata/mapping_city.json", "w"))
-# %%
 # out = io.open("data_dpg_testdata/reduced_views.csv.gz", "wb")
 # out = io.StringIO(df_views.to_csv(index=None))
 # with gzip.GzipFile(fileobj=out, mode="w") as f:

@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 import flatdict
 import numpy as np
 import itertools as it
+import io
 # %%
-df = pd.read_json('data_dpg_testdata/raw_cds_data_json_2022-04-01_2022-07-04.jsonl', orient='records', lines=True)
+df = pd.read_json(io.open('../data_dpg_testdata/raw_cds_data_json_2022-04-01_2022-07-04.jsonl'), orient='records', lines=True)
 df
 
 
