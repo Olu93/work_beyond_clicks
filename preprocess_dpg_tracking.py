@@ -59,6 +59,9 @@ def reduce_event(geo_mapping, city_mapping, refferer_mapping, tmp_dict):
     # If a user is logged in, the user has a GIGYA-ID. We only save whther the user is logged in or not. 
     tmp_dict["IS_LOGGED_IN"] = (tmp_dict.pop("GIGYA_ID", None) is not None)*1
     
+    # Remove "article__" prefix from some article ids
+    tmp_dict["ARTICLE_ID"] = tmp_dict["ARTICLE_ID"].replace("article__", "")
+    
     # Creates two look up tables.
     # Look up for mapping from geo-region-abbreviation to region name and timezone 
     geo_mapping[tmp_dict.pop("GEO_REGION", None)] = {"region_name":tmp_dict.pop("GEO_REGION_NAME", None), "timezone": tmp_dict.pop("GEO_TIMEZONE", None)} 
@@ -135,10 +138,10 @@ df_interactions = pd.DataFrame(interaction_collector)
 df_raw = pd.DataFrame(raw_collector)
 df_views.to_csv("data_dpg_testdata/preflight/reduced_views.csv", index=None)
 df_interactions.to_csv("data_dpg_testdata/preflight/reduced_interactions.csv", index=None)
-df_raw.to_csv("data_dpg_testdata/preflight/raw.csv", index=None)
+df_raw.to_csv("data_dpg_testdata/preflight/raw_views.csv", index=None)
 data = bytes(df_views.to_csv(index=None), encoding="utf-8")
 s_out = gzip.compress(data)
-io.open("data_dpg_testdata/preflight/reduced_views.csv.gz", mode="wb").write(s_out)
+io.open("data_dpg_testdata/preflight/compressed_views.csv.gz", mode="wb").write(s_out)
 
 # %%
 # Full run

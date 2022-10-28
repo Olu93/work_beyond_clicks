@@ -55,8 +55,8 @@ update_freq = 5
 
 def filter_article(tmp_dict):
     if tmp_dict['new_article'] == 'True':
-        return tmp_dict
-    return None
+        return True
+    return False
     
     
 def reduce_article(orig_dict):
@@ -82,56 +82,45 @@ def reduce_article(orig_dict):
     new_dict['topics_generated'] = tmp_dict.get_dict('enrichments.ci_topics_v2')
     new_dict['brand_safety'] = tmp_dict.get_dict('enrichments.brand_safety')
     
-    return new_dict
+    return benedict(new_dict)
 
 
 
 for file_name in tqdm.tqdm(file_list[:2], desc="File"):
     gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
     content = TextIOWrapper(gzipfile)
-    for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines"):
+    for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines", leave=False):
         tmp_dict = benedict(l)
         raw_collector.append(tmp_dict.copy())
         tmp_dict = reduce_article(tmp_dict)
-        view_collector.append(tmp_dict)
+        view_collector.append(tmp_dict.flatten())
         # if ((cnt+1)%update_freq) == 0:
         #     pbar.update(update_freq)
-        # if cnt > limit:
-        #     break
+        if cnt > limit:
+            break
 
 
-df_views = pd.DataFrame(view_collector)
-df_interactions = pd.DataFrame(interaction_collector)
+df_articles = pd.DataFrame(view_collector)
 df_raw = pd.DataFrame(raw_collector)
-# df_views.to_csv("data_dpg_testdata/reduced_views2.csv", index=None)
-# df_interactions.to_csv("data_dpg_testdata/reduced_interactions2.csv", index=None)
-# df_raw.to_csv("data_dpg_testdata/raw2.csv", index=None)
-
-# out = io.open("data_dpg_testdata/reduced_views.csv.gz", "wb")
-# out = io.StringIO(df_views.to_csv(index=None))
-# with gzip.GzipFile(fileobj=out, mode="w") as f:
-#     # f.write(df_views.to_csv(index=None))
-#     f.write(out)
-data = bytes(df_views.to_csv(index=None), encoding="utf-8")
-s_out = gzip.compress(data)
-io.open("data_dpg_testdata/reduced_views.csv.gz", mode="wb").write(s_out)
-# %%
-for col in df_views.columns:
-    print(f"---------- Column {col} -----------")
-    display(df_views[col].value_counts())
+df_articles.to_csv("data_dpg_testdata/preflight/reduced_articles.csv", index=None)
+df_raw.to_csv("data_dpg_testdata/preflight/raw_articles.csv", index=None)
 
 # %%
-# SE_ACTION: Kinda like social engagement
-# PRIVACYWALL_ID: Only for web - Best identifier if GIGA_ID not available
-# GIGYA_ID: Only logged in user
-# DOMAIN_USERID: Not used - Hence, we do not need it
-# DOMAIN_SESSIONID: Session id does not stay for a long time window. Rosa provides doc of snow-plow
+# Full run
+limit = None
+update_freq = 10000
+with io.open(f"./data_dpg_testdata/reduced/reduced_articles.csv", "w") as file_reduced_articles:
+    writer_reduced_views = csv.DictWriter(file_reduced_articles, fieldnames=list(df_articles.columns))
+    writer_reduced_views.writeheader()
+    for file_name in tqdm.tqdm(file_list, desc="File"):
+        gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
+        content = TextIOWrapper(gzipfile)
+        for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines", leave=False):
+            tmp_dict = benedict(l)
+            if not filter_article(tmp_dict):
+                continue
+            tmp_dict = reduce_article(tmp_dict)
+            tmp_dict["file_name"] = file_name.stem
+            writer_reduced_views.writerow(tmp_dict.flatten())
 
-# screen_view from app
-# page_view from web
-# event if none of the above but then it should have SE_??? information
-
-
-# Documentation
-# - Link: Documentation between timestamps
-# - Link: Documentation about difference between DOMAIN_???
+counter
