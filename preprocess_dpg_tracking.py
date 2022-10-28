@@ -65,43 +65,43 @@ print(file_list)
 
 
 # %%
-class ProgressPercentage(object):
-    ''' Progress Class
-    Class for calculating and displaying download progress
-    '''
-    def __init__(self, client, bucket, filename):
-        ''' Initialize
-        initialize with: file name, file size and lock.
-        Set seen_so_far to 0. Set progress bar length
-        '''
-        self._filename = filename
-        self._size = client.head_object(Bucket=bucket, Key=filename)['ContentLength']
-        self._seen_so_far = 0
-        self._lock = threading.Lock()
-        self.prog_bar_len = 80
+# class ProgressPercentage(object):
+#     ''' Progress Class
+#     Class for calculating and displaying download progress
+#     '''
+#     def __init__(self, client, bucket, filename):
+#         ''' Initialize
+#         initialize with: file name, file size and lock.
+#         Set seen_so_far to 0. Set progress bar length
+#         '''
+#         self._filename = filename
+#         self._size = client.head_object(Bucket=bucket, Key=filename)['ContentLength']
+#         self._seen_so_far = 0
+#         self._lock = threading.Lock()
+#         self.prog_bar_len = 80
 
-    def __call__(self, bytes_amount):
-        ''' Call
-        When called, increments seen_so_far by bytes_amount,
-        calculates percentage of seen_so_far/total file size 
-        and prints progress bar.
-        '''
-        # To simplify we'll assume this is hooked up to a single filename.
-        with self._lock:
-            self._seen_so_far += bytes_amount
-            ratio = round((float(self._seen_so_far) / float(self._size)) * (self.prog_bar_len - 6), 1)
-            current_length = int(round(ratio))
+#     def __call__(self, bytes_amount):
+#         ''' Call
+#         When called, increments seen_so_far by bytes_amount,
+#         calculates percentage of seen_so_far/total file size 
+#         and prints progress bar.
+#         '''
+#         # To simplify we'll assume this is hooked up to a single filename.
+#         with self._lock:
+#             self._seen_so_far += bytes_amount
+#             ratio = round((float(self._seen_so_far) / float(self._size)) * (self.prog_bar_len - 6), 1)
+#             current_length = int(round(ratio))
 
-            percentage = round(100 * ratio / (self.prog_bar_len - 6), 1)
+#             percentage = round(100 * ratio / (self.prog_bar_len - 6), 1)
 
-            bars = '+' * current_length
-            output = bars + ' ' * (self.prog_bar_len - current_length - len(str(percentage)) - 1) + str(percentage) + '%'
+#             bars = '+' * current_length
+#             output = bars + ' ' * (self.prog_bar_len - current_length - len(str(percentage)) - 1) + str(percentage) + '%'
 
-            if self._seen_so_far != self._size:
-                sys.stdout.write(output + '\r')
-            else:
-                sys.stdout.write(output + '\n')
-            sys.stdout.flush()
+#             if self._seen_so_far != self._size:
+#                 sys.stdout.write(output + '\r')
+#             else:
+#                 sys.stdout.write(output + '\n')
+#             sys.stdout.flush()
 
 
 # %%
@@ -208,8 +208,8 @@ update_freq = 10000
 for file_name in file_list:
     pbar = tqdm.tqdm(range(limit) if limit else None, total=limit)
     with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
-        with io.open(f"./data_dpg_testdata/reduced_views-{file_name.stem}.csv", "w") as file_reduced_views:
-            with io.open(f"./data_dpg_testdata/reduced_interactions-{file_name.stem}.csv", "w") as file_reduced_interactions:
+        with io.open(f"./data_dpg_testdata/reduced/reduced_views-{file_name.stem}.csv", "w") as file_reduced_views:
+            with io.open(f"./data_dpg_testdata/reduced/reduced_interactions-{file_name.stem}.csv", "w") as file_reduced_interactions:
                 writer_reduced_views = csv.DictWriter(file_reduced_views, fieldnames=list(df_views.columns))
                 writer_reduced_interactions = csv.DictWriter(file_reduced_interactions, fieldnames=list(df_interactions.columns))
                 writer_reduced_views.writeheader()
@@ -236,37 +236,14 @@ for file_name in file_list:
 counter
 # %%
 
-# df_views.to_csv("data_dpg_testdata/reduced_views.csv", index=None)
-# df_interactions.to_csv("data_dpg_testdata/reduced_interactions.csv", index=None)
-# df_raw.to_csv("data_dpg_testdata/raw.csv", index=None)
-json.dump(geo_mapping, io.open("data_dpg_testdata/mapping_geo.json", "w"))
-json.dump(city_mapping, io.open("data_dpg_testdata/mapping_city.json", "w"))
+json.dump(geo_mapping, io.open("data_dpg_testdata/reduced/mapping_geo.json", "w"))
+json.dump(city_mapping, io.open("data_dpg_testdata/reduced/mapping_city.json", "w"))
 # %%
-# out = io.open("data_dpg_testdata/reduced_views.csv.gz", "wb")
-# out = io.StringIO(df_views.to_csv(index=None))
-# with gzip.GzipFile(fileobj=out, mode="w") as f:
-#     # f.write(df_views.to_csv(index=None))
-#     f.write(out)
 data = bytes(df_views.to_csv(index=None), encoding="utf-8")
 s_out = gzip.compress(data)
-io.open("data_dpg_testdata/reduced_views.csv.gz", mode="wb").write(s_out)
+io.open("data_dpg_testdata/reduced/reduced_views.csv.gz", mode="wb").write(s_out)
 # %%
 for col in df_views.columns:
     print(f"---------- Column {col} -----------")
     display(df_views[col].value_counts())
 
-# %%
-# SE_ACTION: Kinda like social engagement
-# PRIVACYWALL_ID: Only for web - Best identifier if GIGA_ID not available
-# GIGYA_ID: Only logged in user
-# DOMAIN_USERID: Not used - Hence, we do not need it
-# DOMAIN_SESSIONID: Session id does not stay for a long time window. Rosa provides doc of snow-plow
-
-# screen_view from app
-# page_view from web
-# event if none of the above but then it should have SE_??? information
-
-
-# Documentation
-# - Link: Documentation between timestamps
-# - Link: Documentation about difference between DOMAIN_???
