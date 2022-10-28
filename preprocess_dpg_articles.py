@@ -64,7 +64,7 @@ def reduce_article(orig_dict):
     new_dict = {}
     new_dict['article_id'] = orig_dict['article_id']
     new_dict['cds_content_id'] = orig_dict['cds_content_id']
-    new_dict['brands'] = tmp_dict['brand']
+    new_dict['brands'] = tmp_dict['brand'].pop()
     new_dict['title'] = tmp_dict['title']
     new_dict['text'] = tmp_dict['text_cleaned']
     new_dict['authors'] = tmp_dict['authors']
