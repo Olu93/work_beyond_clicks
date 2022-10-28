@@ -59,12 +59,12 @@ def filter_article(tmp_dict):
     return False
     
     
-def reduce_article(orig_dict):
+def reduce_article(fname, orig_dict):
     tmp_dict = orig_dict["enriched_article"]
     new_dict = {}
     new_dict['article_id'] = orig_dict['article_id']
     new_dict['cds_content_id'] = orig_dict['cds_content_id']
-    new_dict['brands'] = tmp_dict['brand'].pop()
+    new_dict['brands'] = tmp_dict['brand']
     new_dict['title'] = tmp_dict['title']
     new_dict['text'] = tmp_dict['text_cleaned']
     new_dict['authors'] = tmp_dict['authors']
@@ -81,18 +81,19 @@ def reduce_article(orig_dict):
     new_dict['topics_curated'] = [dict(score=d['score'], name=d['label']) for  d in tmp_dict.get_list('enrichments.topics')]
     new_dict['topics_generated'] = tmp_dict.get_dict('enrichments.ci_topics_v2')
     new_dict['brand_safety'] = tmp_dict.get_dict('enrichments.brand_safety')
+    new_dict["file_name"] = fname
     
     return benedict(new_dict)
 
 
-
-for file_name in tqdm.tqdm(file_list[:2], desc="File"):
+print("Starting preflight...")
+for file_name in tqdm.tqdm(file_list[:1], desc="File"):
     gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
     content = TextIOWrapper(gzipfile)
     for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines", leave=False):
         tmp_dict = benedict(l)
         raw_collector.append(tmp_dict.copy())
-        tmp_dict = reduce_article(tmp_dict)
+        tmp_dict = reduce_article(file_name.stem, tmp_dict)
         view_collector.append(tmp_dict.flatten())
         # if ((cnt+1)%update_freq) == 0:
         #     pbar.update(update_freq)
@@ -105,10 +106,12 @@ df_raw = pd.DataFrame(raw_collector)
 df_articles.to_csv("data_dpg_testdata/preflight/reduced_articles.csv", index=None)
 df_raw.to_csv("data_dpg_testdata/preflight/raw_articles.csv", index=None)
 
+print("Ending preflight...")
 # %%
 # Full run
 limit = None
 update_freq = 10000
+print("Starting full run...")
 with io.open(f"./data_dpg_testdata/reduced/reduced_articles.csv", "w") as file_reduced_articles:
     writer_reduced_views = csv.DictWriter(file_reduced_articles, fieldnames=list(df_articles.columns))
     writer_reduced_views.writeheader()
@@ -117,10 +120,10 @@ with io.open(f"./data_dpg_testdata/reduced/reduced_articles.csv", "w") as file_r
         content = TextIOWrapper(gzipfile)
         for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines", leave=False):
             tmp_dict = benedict(l)
-            if not filter_article(tmp_dict):
-                continue
-            tmp_dict = reduce_article(tmp_dict)
-            tmp_dict["file_name"] = file_name.stem
+            # if not filter_article(tmp_dict):
+            #     continue
+            tmp_dict = reduce_article(file_name.stem,tmp_dict)
             writer_reduced_views.writerow(tmp_dict.flatten())
 
+print("Ending full run...")
 counter
