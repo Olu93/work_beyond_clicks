@@ -87,8 +87,8 @@ def reduce_article(orig_dict):
 
 
 for file_name in tqdm.tqdm(file_list[:2], desc="File"):
-    gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
-    content = TextIOWrapper(gzipfile)
+    jsonlistfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
+    content = TextIOWrapper(jsonlistfile)
     for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines", leave=False):
         tmp_dict = benedict(l)
         raw_collector.append(tmp_dict.copy())
@@ -113,8 +113,8 @@ with io.open(f"./data_dpg_testdata/reduced/reduced_articles.csv", "w") as file_r
     writer_reduced_views = csv.DictWriter(file_reduced_articles, fieldnames=list(df_articles.columns))
     writer_reduced_views.writeheader()
     for file_name in tqdm.tqdm(file_list, desc="File"):
-        gzipfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
-        content = TextIOWrapper(gzipfile)
+        jsonlistfile = s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]
+        content = TextIOWrapper(jsonlistfile)
         for cnt, l in tqdm.tqdm(enumerate(content), desc="Lines", leave=False):
             tmp_dict = benedict(l)
             if not filter_article(tmp_dict):
