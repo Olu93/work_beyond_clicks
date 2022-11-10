@@ -160,7 +160,7 @@ for file_name in file_list:
                 for cnt, l in enumerate(content):
                     tmp_dict = json.loads(l)
                     ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
-                    tmp_dict = reduce_event(mapping_geo, mapping_city, tmp_dict)
+                    tmp_dict = reduce_event(mapping_geo, mapping_city, mapping_refferer, tmp_dict)
                     if ev_name in ["screen_view", "page_view"]:
                         writer_reduced_views.writerow(tmp_dict)
                     else:
@@ -175,3 +175,5 @@ counter
 json.dump(mapping_geo, io.open("data_dpg_testdata/reduced/mapping_geo.json", "w"))
 json.dump(mapping_city, io.open("data_dpg_testdata/reduced/mapping_city.json", "w"))
 json.dump(mapping_refferer, io.open("data_dpg_testdata/reduced/mapping_refferer.json", "w"))
+
+# %%
