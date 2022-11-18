@@ -35,10 +35,11 @@ s3_client = boto3.client(
 # FILENAME is not really needed. But remains for example purposes.
 BUCKET_NAME = "recosearch-nps-bucket-shared-with-utrecht-university"
 FILE_NAME = "20220909-test-on-tracking-event-file-partition-and-compression/tracking_events_single_file_compressed_json_2022-06-30/part-00000-d667af8c-fe5d-4c75-b144-400a5560425d-c000.json.gz"
+time_filter = "20221114"
 
 # list all directories and files inside the bucket
 s3_objects = s3_client.list_objects_v2(Bucket=BUCKET_NAME)
-file_list = [pathlib.Path(item["Key"]) for item in s3_objects["Contents"] if "json.gz" in item["Key"] and "single_file" in item["Key"]]
+file_list = [pathlib.Path(item["Key"]) for item in s3_objects["Contents"] if "json.gz" in item["Key"] and (time_filter in item["Key"])]
 print(file_list)
 
 # %%
@@ -149,9 +150,9 @@ limit = None
 update_freq = 10000
 for file_name in file_list:
     pbar = tqdm.tqdm(range(limit) if limit else None, total=limit)
-    with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
-        with io.open(f"./data_dpg_testdata/reduced/reduced_views-{file_name.stem}.csv", "w") as file_reduced_views:
-            with io.open(f"./data_dpg_testdata/reduced/reduced_interactions-{file_name.stem}.csv", "w") as file_reduced_interactions:
+    with io.open(f"./data_dpg_testdata/reduced/reduced_views.csv", "w") as file_reduced_views:
+        with io.open(f"./data_dpg_testdata/reduced/reduced_interactions.csv", "w") as file_reduced_interactions:
+            with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
                 writer_reduced_views = csv.DictWriter(file_reduced_views, fieldnames=list(df_views.columns))
                 writer_reduced_interactions = csv.DictWriter(file_reduced_interactions, fieldnames=list(df_interactions.columns))
                 writer_reduced_views.writeheader()
@@ -161,6 +162,7 @@ for file_name in file_list:
                     tmp_dict = json.loads(l)
                     ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
                     tmp_dict = reduce_event(mapping_geo, mapping_city, mapping_refferer, tmp_dict)
+                    # tmp_dict["f"]
                     if ev_name in ["screen_view", "page_view"]:
                         writer_reduced_views.writerow(tmp_dict)
                     else:

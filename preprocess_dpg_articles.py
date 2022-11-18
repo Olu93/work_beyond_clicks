@@ -37,8 +37,9 @@ FILE_NAME = "20220909-test-on-tracking-event-file-partition-and-compression/trac
 
 # list all directories and files inside the bucket
 s3_objects = s3_client.list_objects_v2(Bucket=BUCKET_NAME)
-# file_list = [pathlib.Path(item["Key"]) for item in s3_objects["Contents"] if "json.gz" in item["Key"] and "single_file" in item["Key"]]
-file_list = [pathlib.Path(item["Key"]) for item in s3_objects["Contents"] if "cds" in item["Key"] and ".json" in item["Key"] and (not "test-on-file" in item["Key"])]
+time_filter = "20221114"
+
+file_list = [pathlib.Path(item["Key"]) for item in s3_objects["Contents"] if "cds" in item["Key"] and ".json" in item["Key"] and (time_filter in item["Key"])]
 print(file_list)
 
 # %%
@@ -124,8 +125,9 @@ with io.open(f"./data_dpg_testdata/reduced/reduced_articles.csv", "w") as file_r
             tmp_dict = benedict(l)
             # if not filter_article(tmp_dict):
             #     continue
-            tmp_dict = reduce_article(file_name.stem,tmp_dict)
+            tmp_dict = reduce_article(str(file_name),tmp_dict)
             writer_reduced_views.writerow(tmp_dict.flatten())
 
 print("Ending full run...")
 counter
+# %%
