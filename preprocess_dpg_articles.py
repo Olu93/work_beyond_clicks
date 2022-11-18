@@ -84,7 +84,7 @@ def reduce_article(fname, orig_dict):
     new_dict['brand_safety'] = tmp_dict.get_dict('enrichments.brand_safety')
     new_dict["file_name"] = fname
     
-    return new_dict
+    return benedict(new_dict)
 
 
 
