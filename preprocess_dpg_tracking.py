@@ -170,12 +170,12 @@ for file_name in file_list:
                     counter[ev_name] += 1
                     if ((cnt+1)%update_freq) == 0:
                         pbar.update(update_freq)
+                        json.dump(mapping_geo, io.open("data_dpg_testdata/reduced/mapping_geo.json", "w"))
+                        json.dump(mapping_city, io.open("data_dpg_testdata/reduced/mapping_city.json", "w"))
+                        json.dump(mapping_refferer, io.open("data_dpg_testdata/reduced/mapping_refferer.json", "w"))
     pbar.close()        
 counter
 # %%
 # Save all the mappings
-json.dump(mapping_geo, io.open("data_dpg_testdata/reduced/mapping_geo.json", "w"))
-json.dump(mapping_city, io.open("data_dpg_testdata/reduced/mapping_city.json", "w"))
-json.dump(mapping_refferer, io.open("data_dpg_testdata/reduced/mapping_refferer.json", "w"))
 
 # %%
