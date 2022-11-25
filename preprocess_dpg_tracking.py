@@ -41,6 +41,10 @@ time_filter = "20221114"
 s3_objects = s3_client.list_objects_v2(Bucket=BUCKET_NAME)
 file_list = [pathlib.Path(item["Key"]) for item in s3_objects["Contents"] if "json.gz" in item["Key"] and (time_filter in item["Key"])]
 print(file_list)
+# %%
+mapping_files = {str(f):i for i, f in enumerate(file_list)}
+mapping_files
+json.dump(mapping_files,io.open("./data_dpg_testdata/reduced/mapping_view_files.json", "w"))
 
 # %%
 counter = collections.defaultdict(int)
@@ -121,6 +125,7 @@ for file_name in file_list:
             raw_collector.append(tmp_dict.copy())
             ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
             tmp_dict = reduce_event(mapping_geo, mapping_city, mapping_refferer, tmp_dict)
+            tmp_dict["file_name"] = mapping_files[str(file_name)]            
             if ev_name in ["screen_view", "page_view"]:
                 view_collector.append(tmp_dict)
                 # file_reduced_views.writerow(tmp_dict)
@@ -147,11 +152,11 @@ io.open("data_dpg_testdata/preflight/compressed_views.csv.gz", mode="wb").write(
 # %%
 # Full run
 limit = None
-update_freq = 10000
-for file_name in file_list:
-    pbar = tqdm.tqdm(range(limit) if limit else None, total=limit)
-    with io.open(f"./data_dpg_testdata/reduced/reduced_views.csv", "w") as file_reduced_views:
-        with io.open(f"./data_dpg_testdata/reduced/reduced_interactions.csv", "w") as file_reduced_interactions:
+update_freq = 100000
+with io.open(f"./data_dpg_testdata/reduced/reduced_views.csv", "w") as file_reduced_views:
+    with io.open(f"./data_dpg_testdata/reduced/reduced_interactions.csv", "w") as file_reduced_interactions:
+        for file_name in file_list:
+            pbar = tqdm.tqdm(range(limit) if limit else None, total=limit)
             with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
                 writer_reduced_views = csv.DictWriter(file_reduced_views, fieldnames=list(df_views.columns))
                 writer_reduced_interactions = csv.DictWriter(file_reduced_interactions, fieldnames=list(df_interactions.columns))
@@ -162,7 +167,7 @@ for file_name in file_list:
                     tmp_dict = json.loads(l)
                     ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
                     tmp_dict = reduce_event(mapping_geo, mapping_city, mapping_refferer, tmp_dict)
-                    # tmp_dict["f"]
+                    tmp_dict["file_name"] = mapping_files[str(file_name)]
                     if ev_name in ["screen_view", "page_view"]:
                         writer_reduced_views.writerow(tmp_dict)
                     else:
