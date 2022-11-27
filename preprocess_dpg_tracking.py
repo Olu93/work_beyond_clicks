@@ -155,13 +155,13 @@ limit = None
 update_freq = 100000
 with io.open(f"./data_dpg_testdata/reduced/reduced_views.csv", "w") as file_reduced_views:
     with io.open(f"./data_dpg_testdata/reduced/reduced_interactions.csv", "w") as file_reduced_interactions:
+        writer_reduced_views = csv.DictWriter(file_reduced_views, fieldnames=list(df_views.columns))
+        writer_reduced_interactions = csv.DictWriter(file_reduced_interactions, fieldnames=list(df_interactions.columns))
+        writer_reduced_views.writeheader()
+        writer_reduced_interactions.writeheader()
         for file_name in file_list:
             pbar = tqdm.tqdm(range(limit) if limit else None, total=limit)
             with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
-                writer_reduced_views = csv.DictWriter(file_reduced_views, fieldnames=list(df_views.columns))
-                writer_reduced_interactions = csv.DictWriter(file_reduced_interactions, fieldnames=list(df_interactions.columns))
-                writer_reduced_views.writeheader()
-                writer_reduced_interactions.writeheader()
                 content = TextIOWrapper(gzipfile)
                 for cnt, l in enumerate(content):
                     tmp_dict = json.loads(l)
