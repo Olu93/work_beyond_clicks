@@ -69,7 +69,7 @@ def reduce_event(geo_mapping, city_mapping, refferer_mapping, tmp_dict):
     
     # Creates two look up tables.
     # Look up for mapping from geo-region-abbreviation to region name and timezone 
-    geo_mapping[tmp_dict.pop("GEO_REGION", None)] = {"region_name":tmp_dict.pop("GEO_REGION_NAME", None), "timezone": tmp_dict.pop("GEO_TIMEZONE", None)} 
+    geo_mapping[tmp_dict.get("GEO_REGION", None)] = {"region_name":tmp_dict.pop("GEO_REGION_NAME", None), "timezone": tmp_dict.pop("GEO_TIMEZONE", None)} 
     # Look up for mapping from city to id 
     city_mapping[tmp_dict.get("GEO_CITY", None)]    
     tmp_dict["GEO_CITY"] = city_mapping[tmp_dict.get("GEO_CITY", None)]
