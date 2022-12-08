@@ -1,4 +1,3 @@
-benedict==0.3.2
 boto3==1.24.28
 fastcluster==1.2.6
 flatdict==4.0.1
@@ -15,8 +14,10 @@ seaborn==0.11.2
 tqdm==4.62.2
 pyexcel==0.7.0
 pyexcel-ods3==0.6.1
+python-benedict
 statsmodels
 dask
 dask-ml
 hvplot
 jupyter_bokeh
+# Install python-graphviz with conda
