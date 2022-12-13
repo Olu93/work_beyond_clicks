@@ -114,7 +114,7 @@ def reduce_event(geo_mapping, city_mapping, refferer_mapping, tmp_dict):
 
 
 # This is a pre-flight to get all necessary columns beforehand.
-limit = 10000
+limit = 100000
 update_freq = 1000
 for file_name in file_list:
     pbar = tqdm.tqdm(range(limit), total=limit)

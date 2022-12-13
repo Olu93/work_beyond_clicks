@@ -20,4 +20,5 @@ dask
 dask-ml
 hvplot
 jupyter_bokeh
+pingouin>=0.5.2
 # Install python-graphviz with conda
