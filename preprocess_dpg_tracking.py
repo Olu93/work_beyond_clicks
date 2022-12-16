@@ -114,30 +114,33 @@ def reduce_event(geo_mapping, city_mapping, refferer_mapping, tmp_dict):
 
 
 # This is a pre-flight to get all necessary columns beforehand.
-limit = 100000
-update_freq = 1000
-for file_name in file_list:
-    pbar = tqdm.tqdm(range(limit), total=limit)
-    with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
-        content = TextIOWrapper(gzipfile)
-        for cnt, l in enumerate(content):
-            tmp_dict = json.loads(l)
-            raw_collector.append(tmp_dict.copy())
-            ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
-            tmp_dict = reduce_event(mapping_geo, mapping_city, mapping_refferer, tmp_dict)
-            tmp_dict["file_name"] = mapping_files[str(file_name)]            
-            if ev_name in ["screen_view", "page_view"]:
-                view_collector.append(tmp_dict)
-                # file_reduced_views.writerow(tmp_dict)
-            else:
-                interaction_collector.append(tmp_dict)            
-            counter[ev_name] += 1
-            if ((cnt+1)%update_freq) == 0:
-                pbar.update(update_freq)
-            if cnt > limit:
-                break
+try:
+    limit = 10000
+    update_freq = 1000
+    for file_name in file_list:
+        pbar = tqdm.tqdm(range(limit), total=limit)
+        with gzip.GzipFile(fileobj=s3_client.get_object(Bucket=BUCKET_NAME, Key=str(file_name))["Body"]) as gzipfile:
+            content = TextIOWrapper(gzipfile)
+            for cnt, l in enumerate(content):
+                tmp_dict = json.loads(l)
+                raw_collector.append(tmp_dict.copy())
+                ev_name = tmp_dict.pop('EVENT_NAME', 'no-event')
+                tmp_dict = reduce_event(mapping_geo, mapping_city, mapping_refferer, tmp_dict)
+                tmp_dict["file_name"] = mapping_files[str(file_name)]            
+                if ev_name in ["screen_view", "page_view"]:
+                    view_collector.append(tmp_dict)
+                    # file_reduced_views.writerow(tmp_dict)
+                else:
+                    interaction_collector.append(tmp_dict)            
+                counter[ev_name] += 1
+                if ((cnt+1)%update_freq) == 0:
+                    pbar.update(update_freq)
+                if cnt > limit:
+                    break
 
-    pbar.close()        
+        pbar.close()
+except Exception as e:
+    print("Something went wrong!")        
 
 df_views = pd.DataFrame(view_collector)
 df_interactions = pd.DataFrame(interaction_collector)
